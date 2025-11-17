@@ -173,54 +173,66 @@ class App:
             showinfo(title="Error", message=f"Error en el procesamiento: {str(e)}")
 
     def guardar_resultados(self):
-        """Guarda los resultados en archivo CSV"""
+        """Guarda los resultados en archivo CSV dentro de detector-neumonia-UAO/ResultadosGuardados"""
         if not hasattr(self, 'label') or self.label is None:
             showinfo(title="Advertencia", message="No hay resultados para guardar")
             return
-        
+
         try:
-            # ✅ MEJORADO: Verificar si el archivo existe para agregar headers
-            file_exists = os.path.isfile("historial.csv")
-            
-            with open("historial.csv", "a", newline='', encoding='utf-8') as csvfile:
+            # Carpeta destino (usa os.path.join para evitar problemas de separadores)
+            base_dir = os.path.join(os.getcwd(),  "ResultadosGuardados")
+            os.makedirs(base_dir, exist_ok=True)
+
+            # Ruta del CSV dentro de la carpeta
+            csv_path = os.path.join(base_dir, "historial.csv")
+            file_exists = os.path.isfile(csv_path)
+
+            with open(csv_path, "a", newline='', encoding='utf-8') as csvfile:
                 writer = csv.writer(csvfile, delimiter=',')
-                
+
                 # Escribir headers si el archivo es nuevo
                 if not file_exists:
                     writer.writerow(["Cédula", "Diagnóstico", "Probabilidad", "Fecha"])
-                
-                # Escribir datos
+
+                # Escribir datos (manteniendo la fecha como en tu versión original)
                 writer.writerow([
                     self.entry_cedula.get(),
                     self.label,
                     f"{self.proba:.2f}%",
-                    np.datetime64('now').astype(str)[:19]  # Fecha y hora
+                    np.datetime64('now').astype(str)[:19]
                 ])
-            
-            showinfo(title="Éxito", message="Resultados guardados en historial.csv")
-            
+
+            showinfo(title="Éxito", message=f"Resultados guardados en:\n{csv_path}")
+
         except Exception as e:
             showinfo(title="Error", message=f"Error guardando resultados: {e}")
 
     def crear_pdf(self):
-        """Genera un PDF del reporte actual"""
+        """Genera un PDF del reporte actual y lo guarda en detector-neumonia-UAO/ResultadosGuardados"""
         try:
+            # Carpeta destino
+            base_dir = os.path.join(os.getcwd(),  "ResultadosGuardados")
+            os.makedirs(base_dir, exist_ok=True)
+
+            nombre_jpg = os.path.join(base_dir, f"Reporte_{self.reportID}.jpg")
+            nombre_pdf = os.path.join(base_dir, f"Reporte_{self.reportID}.pdf")
+
             # Capturar pantalla de la aplicación
             cap = tkcap.CAP(self.root)
-            nombre_archivo = f"Reporte_{self.reportID}.jpg"
-            cap.capture(nombre_archivo)
-            
-            # Convertir a PDF
-            imagen = Image.open(nombre_archivo)
+            cap.capture(nombre_jpg)
+
+            # Convertir a PDF usando PIL
+            imagen = Image.open(nombre_jpg)
             imagen = imagen.convert("RGB")
-            pdf_path = f"Reporte_{self.reportID}.pdf"
-            imagen.save(pdf_path)
-            
+            imagen.save(nombre_pdf)
+
             self.reportID += 1
-            showinfo(title="PDF", message=f"Reporte guardado como: {pdf_path}")
-            
+            showinfo(title="PDF", message=f"Reporte guardado como:\n{nombre_pdf}")
+
         except Exception as e:
             showinfo(title="Error", message=f"Error generando PDF: {e}")
+
+
 
     def limpiar_campos(self):
         """Limpia todos los campos de la interfaz"""
