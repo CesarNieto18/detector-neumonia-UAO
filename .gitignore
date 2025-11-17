@@ -27,12 +27,12 @@ data/
 *.joblib
 
 # 🚫 REPORTES Y CAPTURAS GENERADAS
-Reporte*.jpg
-Reporte*.pdf
-historial.csv
-*.jpg
-*.png
-*.jpeg
+#Reporte*.jpg
+#Reporte*.pdf
+#historial.csv
+#*.jpg
+#*.png
+#*.jpeg
 
 # 🚫 ARCHIVOS DE SISTEMA Y EDITOR
 .DS_Store
@@ -81,8 +81,7 @@ MANIFEST
 # 🚫 DOCKER
 docker-compose.override.yml
 
-# 🚫 NOTEBOOKS (OPCIONAL - si no quieres subirlos)
-notebooks/*.ipynb
+
 
 # 🚫 BACKUPS
 *.bak
