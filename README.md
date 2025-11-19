@@ -8,6 +8,8 @@ Incluye:
 - Visualización de resultados y mapa de calor (Grad-CAM).
 - Entorno virtual con dependencias administradas vía `requirements.txt`.
 - Repositorio colaborativo con integración vía GitHub.
+- Contenedor Docker para ejecución.
+- Ejecución local.
 
 ---
 
@@ -56,6 +58,7 @@ git clone https://github.com/CesarNieto18/detector-neumonia-UAO.git
 cd detector-neumonia-UAO
 ```
 
+### Metodo 1: Local
 ### 2️. Crear entorno virtual
 ```bash
 py -3.9 -m venv venv39
@@ -74,6 +77,31 @@ pip install -r requirements.txt
 ### 5️. Ejecutar la aplicación
 ```bash
 python detector_neumonia.py
+```
+### Metodo 2: Docker
+
+### Paso 2: Desccargar archivo 
+- conv_MLP_84.h5
+- Mover archivo conv_MLP_84.h5 a C:\Users\[usuario]\detector-neumonia-UAO\models\
+
+### Paso 3: Construir y ejecutar la imagen en docker
+- **Clasificación Automática**: Detecta neumonía bacteriana, viral y casos normales
+```bash
+docker build -t detector-neumonia .
+docker run -p 5000:5000 detector-neumonia
+```
+
+### Ejecución: 
+```bash
+python main.py
+```
+
+### Pruebas:
+- Es necesario probar el funcionamiento de los componentes para asegurar que ha sido exitosa la instalación, aunmque este paso se puede saltar si se ejecuta correctamente.
+```bash
+python test_integrator.py
+python test_quick.py
+python test_simple.py
 ```
 
 ---
