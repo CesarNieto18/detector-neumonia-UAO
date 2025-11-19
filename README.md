@@ -57,34 +57,29 @@ Sigue estos pasos para correr la aplicación localmente.
 git clone https://github.com/CesarNieto18/detector-neumonia-UAO.git
 cd detector-neumonia-UAO
 ```
+### 2. Desccargar archivo 
+- conv_MLP_84.h5
+- Mover archivo conv_MLP_84.h5 a C:\Users\[usuario]\detector-neumonia-UAO\models\
 
 ### Metodo 1: Local
-### 2️. Crear entorno virtual
+### 1. Crear entorno virtual
 ```bash
 py -3.9 -m venv venv39
 ```
 
-### 3️. Activar entorno
+### 2. Activar entorno
 ```bash
 venv39\Scripts\activate
 ```
 
-### 4️. Instalar dependencias
+### ️3. Instalar dependencias
 ```bash
 pip install -r requirements.txt
 ```
 
-### 5️. Ejecutar la aplicación
-```bash
-python detector_neumonia.py
-```
 ### Metodo 2: Docker
 
-### Paso 2: Desccargar archivo 
-- conv_MLP_84.h5
-- Mover archivo conv_MLP_84.h5 a C:\Users\[usuario]\detector-neumonia-UAO\models\
-
-### Paso 3: Construir y ejecutar la imagen en docker
+### 1. Construir y ejecutar la imagen en docker
 - **Clasificación Automática**: Detecta neumonía bacteriana, viral y casos normales
 ```bash
 docker build -t detector-neumonia .
