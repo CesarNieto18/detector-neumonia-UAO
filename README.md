@@ -78,7 +78,7 @@ python detector_neumonia.py
 
 ---
 
-## 🩻 Uso de la Aplicación
+## Uso de la Aplicación
 1. Abrir la interfaz.
 2. Cargar una imagen **DICOM (.dcm)**.
 3. Visualizar la imagen y datos principales.
