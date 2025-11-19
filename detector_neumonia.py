@@ -1,270 +1,265 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-######LIBRERIAS REQUERIDAS########
-import tensorflow as tf 
-from PIL import Image, ImageTk
-from tensorflow.keras import backend as K
-###################################
-
-import cv2
 from tkinter import *
-from tkinter import ttk, font, filedialog, Entry
+from tkinter import ttk, font, filedialog
 from tkinter.messagebox import askokcancel, showinfo, WARNING
-import getpass
+import tkcap
 from PIL import ImageTk, Image
 import csv
-import pyautogui
-import tkcap
-import img2pdf
+import cv2
 import numpy as np
-import time
-tf.compat.v1.disable_eager_execution()
-tf.compat.v1.experimental.output_all_intermediates(True)
+import os
+
+# ✅ CORREGIDO: Importaciones desde  estructura de módulos
+from src.modulos.read_img import read_image_file
+from src.modulos.integrator import predict
+# ✅ CORREGIR imports
 
 
-###### Importación de módulos ######
-from reader import read_dicom_file, read_jpg_file
-from preprocess import preprocess
-from model_loader import model_fun
-
-# se carga el modelo UNA sola vez
-model = model_fun()
-
-
-
-def grad_cam(array):
-    img = preprocess(array)
-    model = model_fun()
-    preds = model.predict(img)
-    argmax = np.argmax(preds[0])
-    output = model.output[:, argmax]
-    last_conv_layer = model.get_layer("conv10_thisone")
-    grads = K.gradients(output, last_conv_layer.output)[0]
-    pooled_grads = K.mean(grads, axis=(0, 1, 2))
-    iterate = K.function([model.input], [pooled_grads, last_conv_layer.output[0]])
-    pooled_grads_value, conv_layer_output_value = iterate(img)
-    for filters in range(64):
-        conv_layer_output_value[:, :, filters] *= pooled_grads_value[filters]
-    # creating the heatmap
-    heatmap = np.mean(conv_layer_output_value, axis=-1)
-    heatmap = np.maximum(heatmap, 0)  # ReLU
-    heatmap /= np.max(heatmap)  # normalize
-    heatmap = cv2.resize(heatmap, (img.shape[1], img.shape[2]))
-    heatmap = np.uint8(255 * heatmap)
-    heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-    img2 = cv2.resize(array, (512, 512))
-    hif = 0.8
-    transparency = heatmap * hif
-    transparency = transparency.astype(np.uint8)
-    superimposed_img = cv2.add(transparency, img2)
-    superimposed_img = superimposed_img.astype(np.uint8)
-    return superimposed_img[:, :, ::-1]
-
-
-def predict(array):
-    #   1. call function to pre-process image: it returns image in batch format
-    batch_array_img = preprocess(array)
-    #   2. call function to load model and predict: it returns predicted class and probability
-    model = model_fun()
-    # model_cnn = tf.keras.models.load_model('conv_MLP_84.h5')
-    prediction = np.argmax(model.predict(batch_array_img))
-    proba = np.max(model.predict(batch_array_img)) * 100
-    label = ""
-    if prediction == 0:
-        label = "bacteriana"
-    if prediction == 1:
-        label = "normal"
-    if prediction == 2:
-        label = "viral"
-    #   3. call function to generate Grad-CAM: it returns an image with a superimposed heatmap
-    heatmap = grad_cam(array)
-    return (label, proba, heatmap)
-
-
-##### Estas funciones comentadas se volvieron módulos: preprocess y reader ######
-'''
-def read_dicom_file(path):
-    #img = dicom.read_file(path)
-    img = pydicom.dcmread(path) # corregido
-
-    img_array = img.pixel_array
-    img2show = Image.fromarray(img_array)
-    img2 = img_array.astype(float)
-    img2 = (np.maximum(img2, 0) / img2.max()) * 255.0
-    img2 = np.uint8(img2)
-    img_RGB = cv2.cvtColor(img2, cv2.COLOR_GRAY2RGB)
-    return img_RGB, img2show
-
-def read_jpg_file(path):
-    img = cv2.imread(path)
-    img_array = np.asarray(img)
-    img2show = Image.fromarray(img_array)
-    img2 = img_array.astype(float)
-    img2 = (np.maximum(img2, 0) / img2.max()) * 255.0
-    img2 = np.uint8(img2)
-    return img2, img2show
-
-def preprocess(array):
-    array = cv2.resize(array, (512, 512))
-    array = cv2.cvtColor(array, cv2.COLOR_BGR2GRAY)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4))
-    array = clahe.apply(array)
-    array = array / 255
-    array = np.expand_dims(array, axis=-1)
-    array = np.expand_dims(array, axis=0)
-    return array '''
-
+# ✅ ELIMINADO: Configuración de TensorFlow duplicada (ya está en load_model.py)
+# ✅ ELIMINADO: Importaciones no utilizadas (getpass, pyautogui, img2pdf, time, pydicom, tf, K)
 
 class App:
     def __init__(self):
         self.root = Tk()
         self.root.title("Herramienta para la detección rápida de neumonía")
-
-        #   BOLD FONT
+        
+        # Configuración de UI
+        self.setup_ui()
+        
+        # Variables de estado
+        self.array = None
+        self.reportID = 0
+        
+        # Iniciar aplicación
+        self.root.mainloop()
+    
+    def setup_ui(self):
+        """Configura todos los elementos de la interfaz gráfica"""
+        # Fuente en negrita
         fonti = font.Font(weight="bold")
-
+        
+        # Configuración de ventana
         self.root.geometry("815x560")
         self.root.resizable(0, 0)
 
-        #   LABELS
-        self.lab1 = ttk.Label(self.root, text="Imagen Radiográfica", font=fonti)
-        self.lab2 = ttk.Label(self.root, text="Imagen con Heatmap", font=fonti)
-        self.lab3 = ttk.Label(self.root, text="Resultado:", font=fonti)
-        self.lab4 = ttk.Label(self.root, text="Cédula Paciente:", font=fonti)
-        self.lab5 = ttk.Label(
+        # ✅ MEJORADO: Labels con nombres más descriptivos
+        self.lbl_imagen_original = ttk.Label(self.root, text="Imagen Radiográfica", font=fonti)
+        self.lbl_imagen_heatmap = ttk.Label(self.root, text="Imagen con Heatmap", font=fonti)
+        self.lbl_resultado = ttk.Label(self.root, text="Resultado:", font=fonti)
+        self.lbl_cedula = ttk.Label(self.root, text="Cédula Paciente:", font=fonti)
+        self.lbl_titulo = ttk.Label(
             self.root,
             text="SOFTWARE PARA EL APOYO AL DIAGNÓSTICO MÉDICO DE NEUMONÍA",
             font=fonti,
         )
-        self.lab6 = ttk.Label(self.root, text="Probabilidad:", font=fonti)
+        self.lbl_probabilidad = ttk.Label(self.root, text="Probabilidad:", font=fonti)
 
-        #   TWO STRING VARIABLES TO CONTAIN ID AND RESULT
+        # Campos de entrada
         self.ID = StringVar()
-        self.result = StringVar()
+        self.entry_cedula = ttk.Entry(self.root, textvariable=self.ID, width=10)
+        
+        # Áreas de texto para imágenes
+        self.texto_imagen_original = Text(self.root, width=31, height=15)
+        self.texto_imagen_heatmap = Text(self.root, width=31, height=15)
+        self.texto_resultado = Text(self.root, width=10, height=1)
+        self.texto_probabilidad = Text(self.root, width=10, height=1)
 
-        #   TWO INPUT BOXES
-        self.text1 = ttk.Entry(self.root, textvariable=self.ID, width=10)
-
-        #   GET ID
-        self.ID_content = self.text1.get()
-
-        #   TWO IMAGE INPUT BOXES
-        self.text_img1 = Text(self.root, width=31, height=15)
-        self.text_img2 = Text(self.root, width=31, height=15)
-        self.text2 = Text(self.root)
-        self.text3 = Text(self.root)
-
-        #   BUTTONS
-        self.button1 = ttk.Button(
-            self.root, text="Predecir", state="disabled", command=self.run_model
+        # ✅ MEJORADO: Botones con tooltips implícitos
+        self.btn_predecir = ttk.Button(
+            self.root, text="Predecir", state="disabled", command=self.ejecutar_prediccion
         )
-        self.button2 = ttk.Button(
-            self.root, text="Cargar Imagen", command=self.load_img_file
+        self.btn_cargar_imagen = ttk.Button(
+            self.root, text="Cargar Imagen", command=self.cargar_imagen
         )
-        self.button3 = ttk.Button(self.root, text="Borrar", command=self.delete)
-        self.button4 = ttk.Button(self.root, text="PDF", command=self.create_pdf)
-        self.button6 = ttk.Button(
-            self.root, text="Guardar", command=self.save_results_csv
+        self.btn_borrar = ttk.Button(self.root, text="Borrar", command=self.limpiar_campos)
+        self.btn_pdf = ttk.Button(self.root, text="PDF", command=self.crear_pdf)
+        self.btn_guardar = ttk.Button(
+            self.root, text="Guardar", command=self.guardar_resultados
         )
 
-        #   WIDGETS POSITIONS
-        self.lab1.place(x=110, y=65)
-        self.lab2.place(x=545, y=65)
-        self.lab3.place(x=500, y=350)
-        self.lab4.place(x=65, y=350)
-        self.lab5.place(x=122, y=25)
-        self.lab6.place(x=500, y=400)
-        self.button1.place(x=220, y=460)
-        self.button2.place(x=70, y=460)
-        self.button3.place(x=670, y=460)
-        self.button4.place(x=520, y=460)
-        self.button6.place(x=370, y=460)
-        self.text1.place(x=200, y=350)
-        self.text2.place(x=610, y=350, width=90, height=30)
-        self.text3.place(x=610, y=400, width=90, height=30)
-        self.text_img1.place(x=65, y=90)
-        self.text_img2.place(x=500, y=90)
+        # Posicionamiento de widgets
+        self.posicionar_widgets()
+        
+        # Enfocar en campo de cédula
+        self.entry_cedula.focus_set()
 
-        #   FOCUS ON PATIENT ID
-        self.text1.focus_set()
+    def posicionar_widgets(self):
+        """Posiciona todos los widgets en la ventana"""
+        # Labels
+        self.lbl_imagen_original.place(x=110, y=65)
+        self.lbl_imagen_heatmap.place(x=545, y=65)
+        self.lbl_resultado.place(x=500, y=350)
+        self.lbl_cedula.place(x=65, y=350)
+        self.lbl_titulo.place(x=122, y=25)
+        self.lbl_probabilidad.place(x=500, y=400)
+        
+        # Botones
+        self.btn_predecir.place(x=220, y=460)
+        self.btn_cargar_imagen.place(x=70, y=460)
+        self.btn_borrar.place(x=670, y=460)
+        self.btn_pdf.place(x=520, y=460)
+        self.btn_guardar.place(x=370, y=460)
+        
+        # Campos de entrada
+        self.entry_cedula.place(x=200, y=350)
+        self.texto_resultado.place(x=610, y=350, width=90, height=30)
+        self.texto_probabilidad.place(x=610, y=400, width=90, height=30)
+        self.texto_imagen_original.place(x=65, y=90)
+        self.texto_imagen_heatmap.place(x=500, y=90)
 
-        #  se reconoce como un elemento de la clase
-        self.array = None
-
-        #   NUMERO DE IDENTIFICACIÓN PARA GENERAR PDF
-        self.reportID = 0
-
-        #   RUN LOOP
-        self.root.mainloop()
-
-    #   METHODS
-    def load_img_file(self):
+    def cargar_imagen(self):
+        """Carga un archivo de imagen DICOM o JPG/PNG"""
         filepath = filedialog.askopenfilename(
             initialdir="/",
-            title="Select image",
+            title="Seleccionar imagen médica",
             filetypes=(
-                ("DICOM", "*.dcm"),
-                ("JPEG", "*.jpeg"),
-                ("jpg files", "*.jpg"),
-                ("png files", "*.png"),
+                ("Imágenes DICOM", "*.dcm"),
+                ("Imágenes JPEG", "*.jpeg"),
+                ("Imágenes JPG", "*.jpg"),
+                ("Imágenes PNG", "*.png"),
             ),
         )
+        
         if filepath:
-            self.array, img2show = read_dicom_file(filepath)
-            #self.img1 = img2show.resize((250, 250), Image.ANTIALIAS)
-            self.img1 = img2show.resize((250, 250), Image.Resampling.LANCZOS)# CORREGIDO
-            self.img1 = ImageTk.PhotoImage(self.img1)
-            self.text_img1.image_create(END, image=self.img1)
-            self.button1["state"] = "enabled"
+            # ✅ MEJORADO: Usar función unificada que detecta automáticamente el tipo
+            self.array, img2show = read_image_file(filepath)
+            
+            if self.array is not None and img2show is not None:
+                # Mostrar imagen original redimensionada
+                self.img_original = img2show.resize((250, 250), Image.LANCZOS)
+                self.img_original_tk = ImageTk.PhotoImage(self.img_original)
+                self.texto_imagen_original.image_create(END, image=self.img_original_tk)
+                
+                # Habilitar botón de predicción
+                self.btn_predecir["state"] = "enabled"
+                print(f"✅ Imagen cargada: {os.path.basename(filepath)}")
+            else:
+                showinfo(title="Error", message="No se pudo cargar la imagen seleccionada")
 
-    def run_model(self):
-        self.label, self.proba, self.heatmap = predict(self.array)
-        self.img2 = Image.fromarray(self.heatmap)
-        #self.img2 = self.img2.resize((250, 250), Image.ANTIALIAS)
-        self.img2 = self.img2.resize((250, 250), Image.Resampling.LANCZOS)#CORREGIDO
-        self.img2 = ImageTk.PhotoImage(self.img2)
-        print("OK")
-        self.text_img2.image_create(END, image=self.img2)
-        self.text2.insert(END, self.label)
-        self.text3.insert(END, "{:.2f}".format(self.proba) + "%")
+    def ejecutar_prediccion(self):
+        """Ejecuta el modelo de predicción y muestra resultados"""
+        if self.array is None:
+            showinfo(title="Advertencia", message="Primero cargue una imagen")
+            return
+        
+        print("🔮 Ejecutando predicción...")
+        
+        # ✅ MEJORADO: Manejo de errores en la predicción
+        try:
+            self.label, self.proba, self.heatmap = predict(self.array)
+            
+            if self.heatmap is not None:
+                # Mostrar heatmap generado
+                self.img_heatmap = Image.fromarray(self.heatmap)
+                self.img_heatmap = self.img_heatmap.resize((250, 250), Image.LANCZOS)
+                self.img_heatmap_tk = ImageTk.PhotoImage(self.img_heatmap)
+                self.texto_imagen_heatmap.image_create(END, image=self.img_heatmap_tk)
+                
+                # Mostrar resultados de predicción
+                self.texto_resultado.delete(1.0, END)
+                self.texto_resultado.insert(END, self.label)
+                
+                self.texto_probabilidad.delete(1.0, END)
+                self.texto_probabilidad.insert(END, f"{self.proba:.2f}%")
+                
+                print(f"✅ Predicción completada: {self.label} ({self.proba:.2f}%)")
+            else:
+                showinfo(title="Error", message="No se pudo generar el mapa de calor")
+                
+        except Exception as e:
+            print(f"❌ Error en predicción: {e}")
+            showinfo(title="Error", message=f"Error en el procesamiento: {str(e)}")
 
-    def save_results_csv(self):
-        with open("historial.csv", "a") as csvfile:
-            w = csv.writer(csvfile, delimiter="-")
-            w.writerow(
-                [self.text1.get(), self.label, "{:.2f}".format(self.proba) + "%"]
-            )
-            showinfo(title="Guardar", message="Los datos se guardaron con éxito.")
+    def guardar_resultados(self):
+        """Guarda los resultados en archivo CSV dentro de detector-neumonia-UAO/ResultadosGuardados"""
+        if not hasattr(self, 'label') or self.label is None:
+            showinfo(title="Advertencia", message="No hay resultados para guardar")
+            return
 
-    def create_pdf(self):
-        cap = tkcap.CAP(self.root)
-        ID = "Reporte" + str(self.reportID) + ".jpg"
-        img = cap.capture(ID)
-        img = Image.open(ID)
-        img = img.convert("RGB")
-        pdf_path = r"Reporte" + str(self.reportID) + ".pdf"
-        img.save(pdf_path)
-        self.reportID += 1
-        showinfo(title="PDF", message="El PDF fue generado con éxito.")
+        try:
+            # Carpeta destino (usa os.path.join para evitar problemas de separadores)
+            base_dir = os.path.join(os.getcwd(),  "ResultadosGuardados")
+            os.makedirs(base_dir, exist_ok=True)
 
-    def delete(self):
-        answer = askokcancel(
-            title="Confirmación", message="Se borrarán todos los datos.", icon=WARNING
+            # Ruta del CSV dentro de la carpeta
+            csv_path = os.path.join(base_dir, "historial.csv")
+            file_exists = os.path.isfile(csv_path)
+
+            with open(csv_path, "a", newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile, delimiter=',')
+
+                # Escribir headers si el archivo es nuevo
+                if not file_exists:
+                    writer.writerow(["Cédula", "Diagnóstico", "Probabilidad", "Fecha"])
+
+                # Escribir datos (manteniendo la fecha como en tu versión original)
+                writer.writerow([
+                    self.entry_cedula.get(),
+                    self.label,
+                    f"{self.proba:.2f}%",
+                    np.datetime64('now').astype(str)[:19]
+                ])
+
+            showinfo(title="Éxito", message=f"Resultados guardados en:\n{csv_path}")
+
+        except Exception as e:
+            showinfo(title="Error", message=f"Error guardando resultados: {e}")
+
+    def crear_pdf(self):
+        """Genera un PDF del reporte actual y lo guarda en detector-neumonia-UAO/ResultadosGuardados"""
+        try:
+            # Carpeta destino
+            base_dir = os.path.join(os.getcwd(),  "ResultadosGuardados")
+            os.makedirs(base_dir, exist_ok=True)
+
+            nombre_jpg = os.path.join(base_dir, f"Reporte_{self.reportID}.jpg")
+            nombre_pdf = os.path.join(base_dir, f"Reporte_{self.reportID}.pdf")
+
+            # Capturar pantalla de la aplicación
+            cap = tkcap.CAP(self.root)
+            cap.capture(nombre_jpg)
+
+            # Convertir a PDF usando PIL
+            imagen = Image.open(nombre_jpg)
+            imagen = imagen.convert("RGB")
+            imagen.save(nombre_pdf)
+
+            self.reportID += 1
+            showinfo(title="PDF", message=f"Reporte guardado como:\n{nombre_pdf}")
+
+        except Exception as e:
+            showinfo(title="Error", message=f"Error generando PDF: {e}")
+
+
+
+    def limpiar_campos(self):
+        """Limpia todos los campos de la interfaz"""
+        respuesta = askokcancel(
+            title="Confirmar",
+            message="¿Está seguro de que desea borrar todos los datos?",
+            icon=WARNING
         )
-        if answer:
-            self.text1.delete(0, "end")
-            self.text2.delete(1.0, "end")
-            self.text3.delete(1.0, "end")
-            self.text_img1.delete(self.img1, "end")
-            self.text_img2.delete(self.img2, "end")
-            showinfo(title="Borrar", message="Los datos se borraron con éxito")
-
+        
+        if respuesta:
+            # Limpiar campos de texto
+            self.entry_cedula.delete(0, END)
+            self.texto_resultado.delete(1.0, END)
+            self.texto_probabilidad.delete(1.0, END)
+            self.texto_imagen_original.delete(1.0, END)
+            self.texto_imagen_heatmap.delete(1.0, END)
+            
+            # Resetear variables de estado
+            self.array = None
+            self.btn_predecir["state"] = "disabled"
+            
+            showinfo(title="Éxito", message="Todos los datos han sido borrados")
 
 def main():
-    my_app = App()
+    """Función principal de la aplicación"""
+    app = App()
     return 0
-
 
 if __name__ == "__main__":
     main()

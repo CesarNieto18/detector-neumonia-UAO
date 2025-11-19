@@ -1,7 +1,103 @@
+# =============================================================================
+# .gitignore - Sistema de Detección de Neumonía
+# =============================================================================
+
+# 🚫 ARCHIVOS SENSIBLES Y CLAVES
+.env
+.env.local
+.env.production
+config.py
+secrets.py
+*.key
+*.pem
+
+# 🚫 MODELOS DE MACHINE LEARNING (GRANDES)
+models/*.h5
+models/*.hdf5
+models/*.pkl
+models/*.joblib
+!models/MODEL_README.md  # Mantener el README
+
+# 🚫 DATOS GRANDES Y ARCHIVOS TEMPORALES
+data/
+*.csv
+*.npy
+*.npz
+*.pkl
+*.joblib
+
+# 🚫 REPORTES Y CAPTURAS GENERADAS
+#Reporte*.jpg
+#Reporte*.pdf
+#historial.csv
+#*.jpg
+#*.png
+#*.jpeg
+
+# 🚫 ARCHIVOS DE SISTEMA Y EDITOR
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+*.log
+
+# 🚫 ENTORNOS VIRTUALES
 venv/
-venv39/
-venv311/
+env/
+ENV/
+.env/
+.venv/
+
+# 🚫 CACHÉ DE PYTHON
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 🚫 ARCHIVOS DE IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 🚫 DOCKER
+docker-compose.override.yml
+
+
+
+# 🚫 BACKUPS
+*.bak
+*.backup
+
+# 🚫 ARCHIVOS DE SISTEMA OPERATIVO
+# Windows
+[Tt]humbs.db
+*.lnk
+
+# macOS
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+
+# Linux
+*~
+.fuse_hidden*

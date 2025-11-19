@@ -1,10 +1,24 @@
-pyautogui
-pillow
-tkcap
-pydicom
-img2pdf
-opencv_python
+#  Núcleo de Machine Learning
+numpy==1.24.3
+tensorflow==2.11.0
+
+# Procesamiento de imágenes y visualización
+opencv-python==4.7.0.72
+Pillow==9.5.0
 matplotlib
+pydicom==2.3.0
+img2pdf==0.4.3
+
+# Testing y depuración
+pytest==7.4.0
+
+#  GUI y captura de pantalla
+tkcap==0.0.2
+pyautogui
+
+# Análisis de datos
 pandas
-tensorflow
+
+#  Sistema y compatibilidad
 python-xlib
+
