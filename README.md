@@ -57,7 +57,7 @@ Sigue estos pasos para correr la aplicación localmente.
 git clone https://github.com/CesarNieto18/detector-neumonia-UAO.git
 cd detector-neumonia-UAO
 ```
-### 2. Desccargar archivo 
+### 2. Descargar archivo 
 - conv_MLP_84.h5
 - Mover archivo conv_MLP_84.h5 a C:\Users\[usuario]\detector-neumonia-UAO\models\
 
