@@ -94,6 +94,7 @@ python main.py
 ### Pruebas:
 - Es necesario probar el funcionamiento de los componentes para asegurar que ha sido exitosa la instalación, aunmque este paso se puede saltar si se ejecuta correctamente.
 ```bash
+python tests/test_modulos.py
 python test_integrator.py
 python test_quick.py
 python test_simple.py
